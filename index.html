@@ -1,1 +1,5 @@
 hello
+parse: aString
+	^ (aString match: (RegularExpression fromString:'[.*_.*]'))
+		ifTrue: [ (aString replace: '_' with: 'xxxxx') replace: '[[]' with: '[ :xxxxx | ' ]
+		ifFalse: [ aString ]

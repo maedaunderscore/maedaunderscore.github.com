@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SmalltalkerのためのF#入門 -パイプライン演算子編-</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="../bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+      }
+    </style>
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
+    <link rel="stylesheet" href="../highlight/styles/github.css">
+    <script type='text/javascript' src="../amber/js/amber.js"></script> 
+  </head>
+
+  <body>
+
+    <div class="topbar">
+      <div class="fill">
+        <div class="container">
+          <a class="brand" href="#">SmalltalkerのためのF#入門</a>
+          <ul class="nav" style="float:right">
+            <li><a href="http://twitter.com/maeda_">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <!-- Main hero unit for a primary marketing message or call to action -->
+      <div class="hero-unit">
+        <h1>SmalltalkerのためのF#入門</h1>
+	<h2>パイプライン演算子編</h2>
+        <p>F#の素晴らしい発明のひとつである「パイプライン演算子」についてSmalltalkerにも分かりやすく説明します</p>
+      </div>
+
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="span-one">
+	  <p>
+	    この記事は
+	    <a href="http://partake.in/events/1c24993a-c475-4fc2-bca4-7a1cd2f81869">F# Advent Calendar 2011</a>
+	    の5日目の記事です。
+	    この記事は、F#入門と言っておきながら、
+	    F#の細かい文法の説明はしません。
+	    雰囲気だけ分かってもらえればと思います。
+	  </p>
+          <h2>パイプライン演算子</h2>
+          <p>
+	    F#は関数型言語というジャンルに分類される言語であり、
+	    関数を組み合わせてプログラムを構成します。
+	    そのようなスタイルの場合、例えば、
+	    引数xをfuncAに適用して、
+	    その戻り値をfuncBに適用して、
+	    その戻り値をfuncCに適用する
+	    というような記述が非常にしばしば現れます。
+	    </p>
+	    <p>
+	    これを素直に書くと
+<pre>
+let func x = funcC (funcB (funcA x))</pre>
+	    というような記述になりますが、funcA→funcB→funcCの順で実行されるのに、
+	    記述順はfuncC、funcB、funcAの順となり分かりにくいですね。
+	    変数束縛を使用して、
+<pre class="prettyprint">
+let func x = 
+  let t1 = funcA x
+  let t2 = funcB t1
+  funcC t2</pre>
+	    のように書けば、処理順と記述順が合致しますが、
+	    余計な一時変数が邪魔で読みにくいです。
+t1がどこでどのように使われているかはt1のスコープ全体を確認しないと分かりません。
+	    </p>
+	    <p>
+	      <b>順次パイプライン演算子「|>」</b>は、関数と引数の記述の順序を逆にします。
+	      つまり、「func x」と「x |> func」は同じです。
+		|>を使えば、上記のコードをすっきり書くことが出来ます。
+<pre class="prettyprint">
+let func x =
+  x
+  |> funcA
+  |> funcB
+  |> funcC
+
+// 一行で書いた場合
+let func x = x |> funcA |> funcB |> funcC
+</pre>
+		パイプライン演算子を使ったことで、順番が直感的に分かりやすい上に、
+		戻り値を次の関数に渡しているという意図が明確です。
+		また、無駄な変数や括弧もなく見た目もすっきりしています。
+	    </p>
+	    <div class="alert-message block-message warning">
+	      <span class="label warning">MEMO</span>
+	      この例の場合は、ポイントフリースタイルで書くと下記のようになります。
+	      <pre>
+		let func = funcA >> funcB >> funcC</pre>
+	    </div>
+	    <p>
+	    パイプライン演算子の右辺は１引数関数のみを受け取ります。
+	    F#では、2つの引数を持つ関数に対して、1つだけ引数を渡して
+	    1引数の関数にすることができます。
+	    1引数関数になれば、パイプライン演算子でつなげるようになります。
+	    同様に3引数関数は2つの引数を渡せば、パイプライン演算子に渡せるわけです。
+	    このように引数をひとつずつ渡せる関数をカリー化された関数と言います。
+	    </p>
+	    <p>
+	    具体例を見てみましょう。
+	    SmalltalkのCollection>>collect:は、F#ではSeq.map関数になります。
+	    F#インタプリタ上でSeq.map関数の型を調べてみましょう。
+	    <pre>
+> let func = Seq.map;;
+
+val func : (('a -> 'b) -> seq<'a>  -> seq<'b>)
+             ^^^^^^^^^    ^^^^^^^     ^^^^^^
+	     第１引数       第２引数　 　 戻り値</pre>
+
+	    第一引数としてa型の値をb型の値に変換する関数を、
+	    第二引数としてa型のコレクションを渡すと、
+	    戻り値としてb型のコレクションを返すという意味になります。
+	    a型とかb型というのは、まだ未確定の何らかの型ということです。
+	    </p>
+	    Seq.mapに第一引数の関数だけを渡してみましょう。
+	    <pre>
+> let func:seq&lt;string&gt; -> seq&lt;int&gt; = Seq.map String.length;;	// Seq.mapに文字列の長さを返す関数(String.length)を渡す
+
+val func : (seq&lt;string&gt; -> seq&lt;int&gt;)
+            ^^^^^^^^^^^    ^^^^^^^^
+            第１引数         戻り値</pre>
+	    <p>
+	    文字列の長さを返す関数をSeq.map関数に渡したことで、
+	    Stringのコレクションを受け取り、intのコレクションを返す関数になりました。
+	    これなら、パイプライン演算子に渡すことが出来ます。
+	    </p>
+	    
+	    Seq.map以外のコレクション操作系関数もコレクションが最後の引数となっています。
+	    パイプライン演算子と組み合わせると、下記のようにコレクション操作をきれいに記述できます。
+	    <pre>
+[1 .. 10]						// 1から10までのコレクションに対して、
+|> Seq.filter (fun x -> x % 2 = 0)			// 偶数だけ取り出して
+|> Seq.map (fun x -> x * x)				// 各要素を自乗して、
+|> Seq.fold (sprintf "%s%03d") ""			// 文字列として結合して、
+|> printfn "%A"						// 表示する("004016036064100"と表示される)</pre>
+	    
+	    コレクションの関数のF#とSmalltalkの対応表は下記の通りです。
+	    <div class="row"><div class="span10">
+	    <table>
+	      <thead><th>F#</th><th>Smalltalk</th></thead>
+	      <tr><td>Seq.map</td><td> Collection >> collect: </td></tr>
+	      <tr><td>Seq.filter</td><td> Collection >> select: </td></tr>
+	      <tr><td>Seq.fold</td><td> Collection >> inject:into: </td></tr>
+	      <tr><td>Seq.iter</td><td> Collection >> do: </td></tr>
+	    </table>
+	    </div></div>
+	    <div class="alert-message block-message warning">
+	      <span class="label warning">MEMO</span>
+	      F#のprintf、sprintfはマジカルな関数です。第一引数で指定したフォーマット文字列で型が変わります。
+	      <pre>
+> sprintf "%s%03d";;					// 2引数関数
+val it : (string -> int -> string) = &lt;fun:it@2&gt;
+> printfn "%d";;					// 1引数関数
+val it : (int -> unit) = &lt;fun:it@6-3&gt;</pre></div>
+
+	  <h2>Smalltalkで実装</h2>
+	  <p>
+	    ではSmalltalkでパイプライン演算子を実装してみましょう。
+	    手元に手頃なSmalltalk環境がない人も心配は無用です。 
+	    <b>このページを開いた時点で、Smalltalkは準備されています。</b>
+	    下のボタンをクリックしてください。
+	  <p>
+          <p><a class="btn" href="#" onclick="smalltalk.Browser._open()">
+	      Open Browser &raquo;</a></p>
+	  </p>
+
+	  <p>
+	    画面下部にSmalltalkのシステムブラウザが開きましたね?
+	    これは<a href="http://amber-lang.net/">Amber Smalltalk</a>
+	    というJavascriptによるSmalltalk実装です。
+	    これでどこでもSmalltalkを試すことができます。
+	    (スマートフォンで見てる方がいらしたら、ごめんなさい)
+	  </p>
+	  <p>
+	    まず、Objectクラスをいじりましょう。
+	    「Kernel-Objects」パッケージ(1)の「Object」クラス(2)の「message handling」プロトコル(3)をクリックしてください。
+	    <img src="FSharp1.png" class="span16"></img>
+	    画面下部のエディタ部分(4)にメソッドのテンプレートが表示されますので、
+	    下記のように書き換えます。
+	    <pre>
+|> aBlock
+  ^ aBlock value: self</pre>
+	    書き換えが終わったら、左下の「Save」ボタン(5)をクリックしてください。
+	    これで|>演算子の実装は完了です。
+	    Smalltalkにおけるパイプライン演算子の右辺は何であるべきか、
+	    は議論の余地はありますが、
+	    とりあえずF#と同じように1引数のブロックとしました。
+	  </p>
+	  <p>
+	    正しく実装できたか、確認しましょう。
+	    「Workspace」タブ(1)をクリックしてください。
+	    <img src="FSharp3.png" class="span10"></img><div class="span6"></div>
+	    下記のコードをエディタ部分(2)に入力し、入力できたら、ドラッグやCtrl+Aなどで<b>コードをすべて選択した状態で</b>
+	    「DoIt」(3)をクリックします。
+	    <pre>
+'#conclusion' asJQuery 
+|> [:jq | jq show]
+|> [:jq | jq offset top]
+|> [:top | 'html,body' asJQuery animate: (< {scrollTop: top}>) with: 'slow']
+</pre>
+<blockquote>
+&lt;と&gt;で囲うことで、部分的にJavascriptで記述できます。
+Amber側で生成したDictionaryをjQueryに渡すと、うまく動かなかったので、このような対処をしています。
+</blockquote>
+</p>
+	  <div id="conclusion" style="margin-top:600px;display:none">
+	    <h2>まとめ</h2>
+	    <p>
+	    SmalltalkにF#のパイプライン演算子を輸入してみました。
+	    </p>
+	    <p>
+	    パイプライン演算子でつなぐ関数は1引数である必要がありますが、	    
+	    F#の関数はカリー化されているため、
+	    部分適用によって引数の数を調整して、関数の合成を行うことが
+	    簡単にできます。
+	    関数を主体としてプログラムを構成する関数型言語にとって、
+	    関数の合成が容易に記述できることは非常に重要です。
+	    </p>
+	    <p>
+	      SmalltalkのメッセージはF#のようにカリー化されていないので、
+	      パイプライン演算子を使うと、少し記述が煩わしくなってしまいました。
+	      その点、Scalaではプレースホルダーによる部分適用が可能でもう少し記述が楽になります。
+	      そのあたりについては、12/11の Scala Advent Calendar 2011 の記事として、
+	      「SmalltalkerのためのScala入門」で解説を予定しています。
+	    </p>
+	    <p>
+	    オブジェクト指向と関数型という異なるパラダイムですが、
+	    それぞれを学ぶことで様々な気づきがあると思います。
+	    本記事が関数型言語の理解の一助になれば幸いです。
+	    </p>
+
+	  </div>
+	    <p>
+	      次のF# Advent Calendarは「しょうちゃん」こと@htid46です。
+	    </p>
+        </div>
+      </div>
+
+<!--
+      <footer>
+        <p>&copy; Company 2011</p>
+      </footer>
+-->
+    </div> <!-- /container -->
+
+    <script type="text/javascript"> 
+//        loadAmber({ready: function(){hljs.initHighlightingOnLoad()}});
+        loadAmber();
+    </script>
+
+  </body>
+</html>
