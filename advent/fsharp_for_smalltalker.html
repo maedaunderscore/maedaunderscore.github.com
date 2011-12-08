@@ -216,10 +216,9 @@ val it : (int -> unit) = &lt;fun:it@6-3&gt;</pre></div>
 	    下記のコードをエディタ部分(2)に入力し、入力できたら、ドラッグやCtrl+Aなどで<b>コードをすべて選択した状態で</b>
 	    「DoIt」(3)をクリックします。
 	    <pre>
-'#conclusion' asJQuery 
-|> [:jq | jq show]
-|> [:jq | jq offset top]
-|> [:top | 'html,body' asJQuery animate: (< {scrollTop: top}>) with: 'slow']
+'#conclusion' asJQuery show;
+|> [:jq | jq offset top
+           |> [:top | 'html,body' asJQuery animate: (< {scrollTop: top}>) with: 'slow'] ]
 </pre>
 <blockquote>
 &lt;と&gt;で囲うことで、部分的にJavascriptで記述できます。
