@@ -24,7 +24,6 @@
     <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
     <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
     <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
-    <link rel="stylesheet" href="../highlight/styles/github.css">
     <script type='text/javascript' src="../amber/js/amber.js"></script> 
   </head>
 
@@ -218,12 +217,8 @@ val it : (int -> unit) = &lt;fun:it@6-3&gt;</pre></div>
 	    <pre>
 '#conclusion' asJQuery show;
 |> [:jq | jq offset top
-           |> [:top | 'html,body' asJQuery animate: (< {scrollTop: top}>) with: 'slow'] ]
+           |> [:top | 'html,body' asJQuery animate: #{ #scrollTop -> top} with: 'slow'] ]
 </pre>
-<blockquote>
-&lt;と&gt;で囲うことで、部分的にJavascriptで記述できます。
-Amber側で生成したDictionaryをjQueryに渡すと、うまく動かなかったので、このような対処をしています。
-</blockquote>
 </p>
 	  <div id="conclusion" style="margin-top:600px;display:none">
 	    <h2>まとめ</h2>
