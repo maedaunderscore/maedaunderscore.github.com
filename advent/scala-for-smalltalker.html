@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SmalltalkerのためのScala入門 -部分適用編-</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="../bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+      }
+    </style>
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
+    <script type='text/javascript' src="../amber/js/amber.js"></script> 
+  </head>
+
+  <body>
+
+    <div class="topbar">
+      <div class="fill">
+        <div class="container">
+          <a class="brand" href="#">SmalltalkerのためのScala入門</a>
+          <ul class="nav" style="float:right">
+            <li><a href="http://twitter.com/maeda_">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <!-- Main hero unit for a primary marketing message or call to action -->
+      <div class="hero-unit">
+        <h1>SmalltalkerのためのScala入門</h1>
+	<h2>部分適用編</h2>
+        <p>Scalaの素晴らしい機能のひとつである「プレースホルダー構文による部分適用」についてSmalltalkerにも分かりやすく説明します</p>
+      </div>
+
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="span-one">
+	  <p>
+	    この記事は
+	    <a href="http://partake.in/events/33870915-f25b-40b6-9456-b898b898d48b">Scala Advent Calendar 2011</a>
+	    の11日目の記事です。
+	    この記事は、Scala入門と言っておきながら、
+	    Scalaの細かい文法の説明はしません。
+	    雰囲気だけ分かってもらえればと思います。
+	  </p>
+          <h2>プレースホルダー構文</h2>
+          <p>
+	    Scalaは関数型言語とJava的なオブジェクト指向を融合した新しいタイプの言語です。
+	    Scalaは多くの関数型言語と同じようにカリー化された関数を定義することもできますが、
+	    Javaと同じようなカリー化されていない形式もサポートしています。
+	    カリー化された関数は1引数ずつ渡して、部分適用をすることができます。
+	    <pre>
+// カリー化されている形式
+def funcCurried(x: String)(y: Int) = x + ":" + y
+val partial:Int => String = funcCurried("hoge")	// 第１引数だけ渡す。partialはIntを受け取ってStringを返す関数になる
+
+// カリー化されていない形式
+def funcNotCurried(x: String, y: String) = x + ":" + y
+val partail:Int => String = funcNotCurried("hoge")	// コンパイルエラー(引数の数が合わない)</pre>
+	    ScalaはJavaのライブラリにシームレスにアクセスすることができますが、
+	    Javaのライブラリのメソッドは当然カリー化されていません。
+	    Scalaの標準ライブラリも基本的にはカリー化されていない形式で記述されています。
+	    カリー化されていないと部分適用ができず、
+	    関数を組み合わせて使うことがやりずらくなります。
+	    
+	    <p>
+	    そこで、Scalaには簡単に部分適用するためのプレースホルダー構文があります。
+	    まだ適用したくない引数には、アンダースコア(_)を置いておけば、
+	    それ以外の引数を部分適用して、アンダースコアの部分を引数とする関数にしてくれます。
+	    また、引数だけでなく、メソッドのレシーバにプレースホルダーを置くこともできます。
+	    </p>
+	    <pre>
+def funcNotCurried(x: String, y: Int, z: Boolean) = x + ":" + y + ":" + z
+
+val partialFunc : Int => String = funcNotCurried("hoge", _, true)		// 第2引数以外を部分適用
+val partialFunc2 : String => String = funcNotCurried(_, 3, false)		// 第1引数以外を部分適用
+val partialFunc3 : (Int, Boolean) => String = funcNotCurried("fuga", _, _)	// 第1引数だけを部分適用
+
+// 上のプレースホルダーは、下記のように解釈される
+val partialFunc : Int => String = { x => funcNotCurried("hoge", x, true) }
+val partialFunc2 : String => String = { x => funcNotCurried(x, 3, false) }
+val partialFunc3 : (Int, Boolean) => String = { (x, y) => funcNotCurried("fuga", x, y) }
+
+// レシーバをプレースホルダーにする
+val func1 : Char => Boolean = _.isDigit
+
+// レシーバと引数を同時にプレースホルダーを置くことも可能
+val func2 : (String, String) => String = _.mkString(_)
+
+// 高階関数として渡す例 (結果は"123")
+val onlyNumber = "a1b2c3" filter { _.isDigit }</pre>
+	      <div class="alert-message block-message warning">
+	      <span class="label warning">Memo</span>
+	      この記事のサンプルコードは部分適用した結果を束縛する変数に
+	      型注釈(型を明示的に記述すること)を
+	      つけていますが、下記のようにアンダースコアに型注釈をつけることもできます。
+	      <pre>
+		val func1 = (_:Char).isDigit</pre>
+	      アンダースコアに型注釈をつけるとその結果型を型推論できるため、
+	      コードはすっきりします。
+	      しかし、実際の部分適用のユースケースは、高階関数として
+	      他の関数に渡すことが多いです。
+	      その場合は型推論に使えるヒントが多いため、基本的に型注釈は不要になります。
+	      例えば上記の例のonlyNumber関数では型注釈はありません。
+	      アンダースコアに型注釈を付けない方が実際の使用法に近いと判断して、
+	      サンプルコードのような記述にしています。
+	      </div>
+
+	    次の例のonlyNumberの定義にはアンダースコアが２つ使われていますが、
+	    2引数関数ではなく、1引数関数となっている点に注意してください。
+	    <pre>
+// アンダースコアが２回出てくる例
+val onlyNumber : String => String = _ filter { _.isDigit }
+                                              ^^^^^^^^^^^ ←この関数をfilterメソッドに渡す
+                                    ^^^^^^^^^^^^^^^^^^^^^^ ←この関数は1引数関数となる
+
+// 上のプレースホルダーは、下記のように解釈される
+val onlyNumber:String => String = { str => str filter { c => c.isDigit } }</pre>
+	    2つめのアンダースコアはfilterメソッドへの高階関数として渡されるため、
+	    一つ目のレシーバ部分のアンダースコアだけがonlyNumber関数の引数になります。
+	    プレースホルダー構文がひとつの関数と見なされるルールは説明が難しいですが、
+	    引数として渡した時や括弧で括った時などに一つの関数として評価されます。
+	    具体例を見た方が分かりやすいと思います。下記の例のfunc3とfunc6は途中で関数と解釈されるため、
+	    型が合わずコンパイルエラーになります。
+	    <pre>
+val func1 : (String, String) => String = _.mkString(_)
+val func2 : (String, String, String) => String = _.mkString(_).mkString(_)
+val func3 : (String, String, String) => String = _.mkString(_.mkString(_)) // コンパイルエラー
+                                                            ^^^^^^^^^^^^^ ← 引数として渡した時点で、関数として評価される
+val func4 : (Int, Int) => Int = _ + _		// _.+(_)と同じ意味
+val func5 : (Int, Int) => Int = _ + _ * 2	// _.+(_).*(2)と同じ
+val func6 : (Int, Int) => Int = (_ + _) * 2	// コンパイルエラー
+                                ^^^^^^^ ← 括弧内でひとつの関数として評価される
+val func7 : (Int, Int) => Int = _.+(_).*(2)     // このように書けばコンパイルは通る(しかし、読みにくい)
+	    </pre>
+	    このように、プレースホルダー構文は複雑な式には使えません。
+	    複雑な式になる場合は、引数を明示した無名関数を使うか、
+	    もしくはきちんと名前をつけて関数を定義するべきでしょう。
+<!--
+	      <div class="alert-message block-message warning">
+	      <span class="label warning">Memo</span>
+	      メソッド名の後に括弧なしでアンダースコアをつけることで、
+	      メソッドから関数に変換することができます。
+	      また関数はcurriedメソッドを持っており、
+	      それを使えばカリー化された関数を得られます。
+	      <pre>
+val funcNotCurried = ('a' to 'z').slice _		// (Int, Int) => IndexedSeq[Char]
+funcNotCurried(5, 10).mkString(":")			// "f:g:h:i:j"
+
+val funcCurried = (('a' to 'z').slice _).curried	// Int => Int => IndexedSeq[Char]
+funcCurried(5)(10).mkString(":")			// "f:g:h:i:j"</pre></div>
+-->
+<!--
+<a href="http://ocaml-nagoya.g.hatena.ne.jp/yoshihiro503/20110306/1299395284">ITPLの方のブログ</a>でも紹介されている通りScalaでもF#のパイプライン演算子を実装することは可能です。
+<pre><code>
+implicit def AofT[T](x: T) = new { def |>[S] (f: T => S): S = f(x) }
+</code></pre>
+-->
+	  <h2>Smalltalkで実装</h2>
+	  <p>
+	    早速、Smalltalkでプレースホルダー構文を実装してみましょう。
+	    手元に手頃なSmalltalk環境がない人も心配は無用です。 
+	    <b>このページを開いた時点で、Smalltalkは準備されています。</b>
+	    下のボタンをクリックしてください。
+	  </p>
+          <p><a class="btn" href="#" onclick="smalltalk.Browser._open()">
+	      Open Browser &raquo;</a></p>
+
+	  <p>
+	    画面下部にSmalltalkのブラウザが開きましたね?
+	    これは<a href="http://amber-lang.net/">Amber Smalltalk</a>
+	    というJavascriptによるSmalltalk実装です。
+	    これでどこでもSmalltalkを試すことができます。
+	    (スマートフォンで見てる方がいらしたら、ごめんなさい)
+	  </p>
+	  <p>
+	    では、実装に入りたいのですが、
+	    プレースホルダー構文を実装するには、
+	    Smalltalkの構文から変える必要があります。
+	    Amber Smalltalkのパーサー部分はPEG.jsというパーサージェネレータが生成した
+	    Javascriptのコードになっています。
+	    非常に残念ですが、Smalltalkで記述されていないので、
+	    パーサー部分はダイナミックにいじることはできません。
+
+	    しょうがないので、パースする前に文字列レベルでコードを書き換える方針にします。
+	    
+	    <p>
+	    では、Compilerクラスをいじりましょう。
+	    "Compiler"パッケージ(1)の"Compiler"クラス(2)の"compiling"プロトコル(3)の"parse:"メソッド(4)を
+	    クリックしてください。
+	    <img src="scala1.png" class="span16"></img>
+	    画面下部のエディタ部分(5)にparse:メソッドのコードが表示されます。
+	    
+	    Smalltalkクラスのparseメソッドに委譲しているので、
+	    その前にコードの書き換えをすればよさそうです。
+	    下記のように書き換えましょう。
+	    このメソッドの定義をミスると、今後パースができなくなりますので、気をつけてください。。
+	    (ミスった人はページをリロードしてください。また一からやり直しです。)
+	    <pre>
+parse: aString
+    | replaced |
+    replaced := (aString replace: '\[' with: '[ :xxxxx |') replace: '_' with: 'xxxxx'.
+    ^Smalltalk current parse: replaced</pre>
+	    コードを書き換えたら、左下の「Save」ボタン(6)をクリックしてください。
+	    ブロック内にアンダースコアがあれば、プレースホルダーと見なすようにしました。
+	    無条件に置換しただけのひどいコードですね。
+	    もう引数つきのブロックは正しくパースできません。
+	    文字列の中でアンダースコアを使うとxxxxxに置換されてしまいます。
+	    その他不具合を言ったら枚挙に暇がない、いい加減なコードですが、それでも動いてしまうのがSmalltalkのすごいところです。
+	    <div class="alert-message block-message warning">
+	      <span class="label warning">言い訳</span>
+	      きちんと書くとそれなりにボリュームが出てしまったので、やめました。手順の簡略化ということで勘弁してください。
+	    </div>
+	    <p>
+	      動作をを確認してみましょう。Workspaceタブ(1)をクリックしてください。
+	      <div class="row"><img src="scala2.png" class="span8"></img></div>
+	      エディタ部分(2)に下記のコードを入力し、<b>コードを選択して</b>、PrintIt(3)をクリックしてください。
+	      <pre>
+(1 to: 10) select: [ _ even ]</pre>
+	      偶数だけが表示されたでしょうか？逆に本来正しいSmalltalkのコードはパースエラーとなります。
+	      <pre>
+(1 to: 10) select: [ :each | each even ]</pre>
+	    </p>
+	    <p>
+	      F#のパイプライン演算子も導入すれば、下記のようなコードも書けます。
+	      複数行のコードを実行する場合は、ドラッグで<b>コードを選択して</b>、PrintItをクリックしてください。
+	      (パイプライン演算子の実装方法は<a href="fsharp_for_smalltalker.html" target="_blank">こちら</a>を参照)
+	      <pre>
+(1 to: 10)
+|> [ _ select: [ _ even ] ]
+|> [ _ collect: [ _ * 3 ] ]</pre>
+	    </p>
+	    最後に次のコードをWorkspaceで評価してください。(パイプライン演算子の実装も必要です)
+	    Workspace上で評価する<b>コードを選択して</b>、「DoIt」をクリックします。
+<pre>
+'#conclusion' asJQuery
+  show;
+  |> [ _ offset top |> [ 'html,body' asJQuery animate: #{ #scrollTop -> _ } with: 'slow' ] ];
+  animate: #{#opacity -> 1} duration: 8000</pre>
+	  <div id="conclusion" style="margin-top:200px; display:none;opacity:0">
+	  <h2>まとめ</h2>
+	  <p>
+	    SmalltalkにScalaのプレースホルダー構文を輸入してみました。
+	    関数型とオブジェクト指向を融合させたScalaだけあって、
+	    Smalltalkの構文にも混ぜやすいですね。
+	  </p>
+	  <p>
+	    オブジェクト指向と関数型という異なるパラダイムですが、
+	    それぞれを学ぶことで様々な気づきがあると思います。
+	    本記事が関数型言語の理解の一助になれば幸いです。
+	  </p>
+	  <p>
+	    次のScala Advent Calendarは @gkojax さんです。
+	  </p>
+        </div>
+      </div>
+
+<!--
+      <footer>
+        <p>&copy; Company 2011</p>
+      </footer>
+-->
+    </div> <!-- /container -->
+
+    <script type="text/javascript"> 
+        loadAmber();
+    </script>
+
+  </body>
+</html>
