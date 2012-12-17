@@ -1,1 +1,184 @@
-/Users/maeda/Dropbox/language.scala.org
+#+TITLE: Modularized Language features を解説する
+#+AUTHOR: Yasuyuki Maeda(@maeda_)
+#+LANGUAGE: ja
+#+EMAIL: clouds.across.the.moon at gmail dot com
+
+
+この記事は[[http://qiita.com/advent-calendar/2012/play-or-scala][Play or Scala Advent Calendar 2012]]の17日目の記事です。
+
+* Modularized Language Feautreとは
+
+Scala 2.10から一部の機能を使用するときに、下記のいずれかの方法で明示的な有効化が必要になります。
+ - コンパイラオプション(-language:(機能の名前))をつける
+ - 各機能に対応する型(feature type)のimplicit valueをスコープ内で宣言する
+
+全体で有効化する場合は一つ目の方法を、機能を使用する場所が限定されている場合は２つ目の方法を使用します。
+
+２つ目の方法の簡単なやり方はlanguage.scalaに定義されているimplicit objectをimportする方法です。
+feature typeと同じ名前のimplicit objectが宣言されています。feature typeは型なのに小文字で始まっており、
+implicit objectと全く同じ書き方になっています。
+Scalaのimportはスコープがきめ細かに扱えるので、特定のクラスやメソッド、ブロック内でのみ有効化などができます。
+#+BEGIN_SRC scala
+import language.{dynamics, reflectiveCalls}
+#+END_SRC
+
+また、feature typeのimplicit valを宣言したtraitを使用する事でmixinされたクラス内でその機能を有効化することもできます。
+#+BEGIN_SRC scala
+trait SomeDSL {  // このtraitをmix-inしたクラス内ではdynamicsが有効になる
+  implicit val dynamicsOps = language.dynamics
+  ...
+}
+#+END_SRC
+
+各feture typeの詳細な説明や明示的な有効化が必要な理由等がlanguage.scalaのコメントに記載されています。
+有効化をしていない場合、機能によってコンパイルエラーになるものとワーニングになるものがあります。
+
+この記事では、Scala 2.10 RC5で定義されているlanguage.scalaを一通り説明します。
+
+* 各feature typeの説明
+** dynamics
+Dynamicはコンパイル時にオブジェクトのメソッドが見つからないなどの場合に、エラーとしないで、applyDynamicメソッドなどを呼び出す機能です。
+Dynamicなクラスを定義するタイミングでlanguage.dynamicsが見つかる必要があります。Dynamicなメソッドを呼び出す側は、有効化は不要です。
+#+BEGIN_SRC scala
+scala> val x = {    // ブロックの中でのみDynamicsを継承したクラスを定義可能になる。
+     |   import language.dynamics
+     |   new Dynamic{ def applyDynamic(name: String)(arg: String) = s"$name:$arg" }
+     | }
+x: Dynamic{def applyDynamic(name: String)(arg: String): String} = $anon$1@6994a8ba
+
+scala> {            // 呼び出し側はlanguage.dynamicsは不要(構造部分型を使用するため、reflectiveCallsのimportが必要)
+     | import language.reflectiveCalls
+     | x.hoge("fuga")
+     | }
+#+END_SRC
+
+** postfixOps
+後置演算子を使用可能にします。後置演算子を許容すると次の行に続いているのか否かの判断が難しくなるという理由で
+明示的な有効化を必要とします。
+#+BEGIN_SRC scala
+scala> class A { def ! = 3 }
+defined class A
+
+scala> new A!    // 後置演算子を使うとwarningが出る。
+warning: there were 1 feature warnings; re-run with -feature for details
+res0: Int = 3
+
+scala> :paste
+// Entering paste mode (ctrl-D to finish)
+
+new A!
+3              // (new A).!(3)と解釈される
+
+// Exiting paste mode, now interpreting.
+
+<console>:9: error: Int does not take parameters
+              new A!
+
+scala> :paste
+
+new A!
+
+3               // 空行を入れると別々の文として解釈される
+
+// Exiting paste mode, now interpreting.
+
+warning: there were 1 feature warnings; re-run with -feature for details
+res1: Int = 3
+#+END_SRC
+
+** reflectiveCalls
+構造部分型の要素を呼び出す場合に有効化します。
+構造部分型を定義するタイミングではなく、要素の呼び出しをするタイミングでimplicitがimportされている必要があります。
+構造部分型は便利ですが、実装上はリフレクションで実現しているため、パフォーマンスの劣化、プラットフォーム依存、ProGuardなどで問題がある等の理由で
+使用する場合は、明示的に有効化が必要となっています。
+
+#+BEGIN_SRC scala
+scala> trait A { val x:Int }
+defined trait A
+
+scala> val x = new A { val x = 3 }   // これはただのオーバライド
+x: A = $anon$1@5424bf0
+
+scala> x.x
+res1: Int = 3
+
+scala> val x = new A { val x = 3; val y = 5 }  // yについては構造部分型扱い
+x: A{val y: Int} = $anon$1@53cdad73
+
+scala> x.x
+res2: Int = 3
+
+scala> x.y                                     // 構造部分型の要素を呼び出すタイミングでワーニング
+warning: there were 1 feature warnings; re-run with -feature for details
+              x.y
+                ^
+res3: Int = 5
+#+END_SRC
+
+** implicitConversions
+暗黙の型変換を定義する場合に有効化します。implicit defを定義するタイミングでワーニングが発生します。
+implicit parameterまたはimplicit classを使おうということです。
+
+language.scalaのコメントにはunary functionのimplicit valueもだめっぽい事が書いてありますが、
+やってみると通ります。よくわかりません。
+
+#+BEGIN_SRC scala
+scala> implicit def f(x: Int): String = x.toString
+warning: there were 1 feature warnings; re-run with -feature for details
+       implicit def f(x: Int): String = x.toString
+                    ^
+f: (x: Int)String
+
+scala> implicit val f = (x :String) => x.length     // こっちはOKみたい
+f: String => Int = <function1>
+
+scala> val x: Int = "We love scala"
+x: Int = 13
+
+#+END_SRC
+
+** higherKinds
+高階型を定義する場合に有効化します。
+強力な型の表現が可能になりますが、型推論も難しくなるし、やりすぎるとコードも読みにくくなります。
+初学者には難しいので避けましょうとのことです。
+
+#+BEGIN_SRC scala
+scala> trait T[M[_]]
+warning: there were 1 feature warnings; re-run with -feature for details
+       trait T[M[_]]
+               ^
+defined trait T
+#+END_SRC
+  
+** existentials
+forSomeがないと記述できない複雑な存在型を使う場合に有効化します。
+省略形で記述できる存在型は有効化しなくても使用可能です。
+forSomeは将来的にはなくなる方向のようです。
+省略系の存在型は普通に使えるのでfeture typeの名前が雑な気がしますが、存在型がどうでもよいので、どうでもよいです。
+
+#+BEGIN_SRC scala
+scala> trait T[A, B]
+defined trait T
+
+scala> val x: T[A, A] forSome { type A } = null
+warning: there were 3 feature warnings; re-run with -feature for details
+x: T[A,A] forSome { type A } = null
+
+scala> val x: T[A, B] forSome { type A; type B } = null       // 省略系で書ける存在型はOK
+x: T[_, _] = null
+#+END_SRC
+
+ちなみにabstract typeを指して存在型と呼ぶ場合がありますが、その意味での存在型は有用です。
+参考：https://www.precog.com/blog-precog-2/entry/existential-types-ftw
+
+** experimental
+実験的な機能を使う際にも有効化が必要です。現状ではマクロが該当します。
+
+* まとめ
+Scala 2.10から、マニアックな機能だけなく、普通に使うような機能も有効化が必要になります。
+強力すぎる機能については乱用を避け、注意深く責任を持って使用しましょうという、Odersky先生からのメッセージですね。
+
+ScalaはライブラリやDSLを開発する側とそれらを利用する側のそれぞれの視点を考慮して作られています。
+
+
+参考：http://docs.scala-lang.org/sips/pending/modularizing-language-features.html

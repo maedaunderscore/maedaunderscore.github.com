@@ -1,1 +1,410 @@
-/Users/maeda/Dropbox/language.scala.html
+<?xml version="1.0" encoding="euc-jp"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="ja" xml:lang="ja">
+<head>
+<title>Modularized Language features を解説する</title>
+<meta http-equiv="Content-Type" content="text/html;charset=euc-jp"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2012-12-15 08:48:17 JST"/>
+<meta name="author" content="Yasuyuki Maeda(@maeda_)"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+
+<h1 class="title">Modularized Language features を解説する</h1>
+
+
+<p>
+この記事は<a href="http://qiita.com/advent-calendar/2012/play-or-scala">Play or Scala Advent Calendar 2012</a>の17日目の記事です。
+</p>
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Modularized Language Feautreとは </a></li>
+<li><a href="#sec-2">2 各feature typeの説明 </a>
+<ul>
+<li><a href="#sec-2.1">2.1 dynamics </a></li>
+<li><a href="#sec-2.2">2.2 postfixOps </a></li>
+<li><a href="#sec-2.3">2.3 reflectiveCalls </a></li>
+<li><a href="#sec-2.4">2.4 implicitConversions </a></li>
+<li><a href="#sec-2.5">2.5 higherKinds </a></li>
+<li><a href="#sec-2.6">2.6 existentials </a></li>
+<li><a href="#sec-2.7">2.7 experimental </a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 まとめ </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Modularized Language Feautreとは </h2>
+<div class="outline-text-2" id="text-1">
+
+
+<p>
+Scala 2.10から一部の機能を使用するときに、下記のいずれかの方法で明示的な有効化が必要になります。
+</p><ul>
+<li>
+コンパイラオプション(-language:(機能の名前))をつける
+</li>
+<li>
+各機能に対応する型(feature type)のimplicit valueをスコープ内で宣言する
+
+</li>
+</ul>
+
+<p>全体で有効化する場合は一つ目の方法を、機能を使用する場所が限定されている場合は２つ目の方法を使用します。
+</p>
+<p>
+２つ目の方法の簡単なやり方はlanguage.scalaに定義されているimplicit objectをimportする方法です。
+feature typeと同じ名前のimplicit objectが宣言されています。feature typeは型なのに小文字で始まっており、
+implicit objectと全く同じ書き方になっています。
+Scalaのimportはスコープがきめ細かに扱えるので、特定のクラスやメソッド、ブロック内でのみ有効化などができます。
+</p>
+
+
+<pre class="example">import language.{dynamics, reflectiveCalls}
+</pre>
+
+
+
+
+<p>
+また、feature typeのimplicit valを宣言したtraitを使用する事でmixinされたクラス内でその機能を有効化することもできます。
+</p>
+
+
+<pre class="example">trait SomeDSL {  // このtraitをmix-inしたクラス内ではdynamicsが有効になる
+  implicit val dynamicsOps = language.dynamics
+  ...
+}
+</pre>
+
+
+
+
+<p>
+各feture typeの詳細な説明や明示的な有効化が必要な理由等がlanguage.scalaのコメントに記載されています。
+有効化をしていない場合、機能によってコンパイルエラーになるものとワーニングになるものがあります。
+</p>
+<p>
+この記事では、Scala 2.10 RC5で定義されているlanguage.scalaを一通り説明します。
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> 各feature typeの説明 </h2>
+<div class="outline-text-2" id="text-2">
+
+
+</div>
+
+<div id="outline-container-2.1" class="outline-3">
+<h3 id="sec-2.1"><span class="section-number-3">2.1</span> dynamics </h3>
+<div class="outline-text-3" id="text-2.1">
+
+<p>Dynamicはコンパイル時にオブジェクトのメソッドが見つからないなどの場合に、エラーとしないで、applyDynamicメソッドなどを呼び出す機能です。
+Dynamicなクラスを定義するタイミングでlanguage.dynamicsが見つかる必要があります。Dynamicなメソッドを呼び出す側は、有効化は不要です。
+</p>
+
+
+<pre class="example">scala&gt; val x = {    // ブロックの中でのみDynamicsを継承したクラスを定義可能になる。
+     |   import language.dynamics
+     |   new Dynamic{ def applyDynamic(name: String)(arg: String) = s"$name:$arg" }
+     | }
+x: Dynamic{def applyDynamic(name: String)(arg: String): String} = $anon$1@6994a8ba
+
+scala&gt; {            // 呼び出し側はlanguage.dynamicsは不要(この例の場合、構造部分型を使用するため、reflectiveCallsのimportが必要)
+     | import language.reflectiveCalls
+     | x.hoge("fuga")
+     | }
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2.2" class="outline-3">
+<h3 id="sec-2.2"><span class="section-number-3">2.2</span> postfixOps </h3>
+<div class="outline-text-3" id="text-2.2">
+
+<p>後置演算子を使用可能にします。後置演算子を許容すると次の行に続いているのか否かの判断が難しくなるという理由で
+明示的な有効化を必要とします。
+</p>
+
+
+<pre class="example">scala&gt; class A { def ! = 3 }
+defined class A
+
+scala&gt; new A!    // 後置演算子を使うとwarningが出る。
+warning: there were 1 feature warnings; re-run with -feature for details
+res0: Int = 3
+
+scala&gt; :paste
+// Entering paste mode (ctrl-D to finish)
+
+new A!
+3              // (new A).!(3)と解釈される
+
+// Exiting paste mode, now interpreting.
+
+&lt;console&gt;:9: error: Int does not take parameters
+              new A!
+
+scala&gt; :paste
+
+new A!
+
+3               // 空行を入れると別々の文として解釈される
+
+// Exiting paste mode, now interpreting.
+
+warning: there were 1 feature warnings; re-run with -feature for details
+res1: Int = 3
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2.3" class="outline-3">
+<h3 id="sec-2.3"><span class="section-number-3">2.3</span> reflectiveCalls </h3>
+<div class="outline-text-3" id="text-2.3">
+
+<p>構造部分型の要素を呼び出す場合に有効化します。
+構造部分型を定義するタイミングではなく、要素の呼び出しをするタイミングでimplicitがimportされている必要があります。
+構造部分型は便利ですが、実装上はリフレクションで実現しているため、パフォーマンスの劣化、プラットフォーム依存、ProGuardなどで問題がある等の理由で
+使用する場合は、明示的に有効化が必要となっています。
+</p>
+
+
+
+<pre class="example">scala&gt; trait A { val x:Int }
+defined trait A
+
+scala&gt; val x = new A { val x = 3 }   // これはただのオーバーロード
+x: A = $anon$1@5424bf0
+
+scala&gt; x.x
+res1: Int = 3
+
+scala&gt; val x = new A { val x = 3; val y = 5 }  // yについては構造部分型
+x: A{val y: Int} = $anon$1@53cdad73
+
+scala&gt; x.x
+res2: Int = 3
+
+scala&gt; x.y                                     // 構造部分型の要素を呼び出すタイミングでワーニング
+warning: there were 1 feature warnings; re-run with -feature for details
+              x.y
+                ^
+res3: Int = 5
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2.4" class="outline-3">
+<h3 id="sec-2.4"><span class="section-number-3">2.4</span> implicitConversions </h3>
+<div class="outline-text-3" id="text-2.4">
+
+<p>暗黙の型変換を定義する場合に有効化します。implicit defを定義するタイミングでワーニングが発生します。
+implicit parameterまたはimplicit classを使おうということです。
+</p>
+<p>
+language.scalaのコメントにはunary functionのimplicit valueもだめっぽい事が書いてありますが、
+やってみると通ります。よくわかりません。
+</p>
+
+
+
+<pre class="example">scala&gt; implicit def f(x: Int): String = x.toString
+warning: there were 1 feature warnings; re-run with -feature for details
+       implicit def f(x: Int): String = x.toString
+                    ^
+f: (x: Int)String
+
+scala&gt; implicit val f = (x :String) =&gt; x.length     // 関数はOKみたい
+f: String =&gt; Int = &lt;function1&gt;
+
+scala&gt; val x: Int = "We love scala"
+x: Int = 13
+
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2.5" class="outline-3">
+<h3 id="sec-2.5"><span class="section-number-3">2.5</span> higherKinds </h3>
+<div class="outline-text-3" id="text-2.5">
+
+<p>高階型を定義する場合に有効化します。
+強力な型の表現が可能になりますが、型推論も難しくなりコードも読みにくくなります。
+初学者には難しいので避けましょうとのことです。
+</p>
+
+
+
+<pre class="example">scala&gt; trait T[M[_]]
+warning: there were 1 feature warnings; re-run with -feature for details
+       trait T[M[_]]
+               ^
+defined trait T
+</pre>
+
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2.6" class="outline-3">
+<h3 id="sec-2.6"><span class="section-number-3">2.6</span> existentials </h3>
+<div class="outline-text-3" id="text-2.6">
+
+<p>forSomeがないと記述できない複雑な存在型を使う場合に有効化します。
+省略形で記述できる存在型は有効化しなくても使用可能です。
+forSomeは将来的にはなくなる方向のようです。
+省略系の存在型は普通に使えるのでfeture typeの名前が雑な気がしますが、存在型がどうでもよいので、どうでもよいです。
+</p>
+
+
+
+<pre class="example">scala&gt; trait T[A, B]
+defined trait T
+
+scala&gt; val x: T[A, A] forSome { type A } = null
+warning: there were 3 feature warnings; re-run with -feature for details
+x: T[A,A] forSome { type A } = null
+
+scala&gt; val x: T[A, B] forSome { type A; type B } = null       // 省略系で書ける存在型はOK
+x: T[_, _] = null
+</pre>
+
+
+
+
+<p>
+ちなみにabstract typeを指して存在型と呼ぶ場合がありますが、その意味での存在型は有用です。
+参考：<a href="https://www.precog.com/blog-precog-2/entry/existential-types-ftw">https://www.precog.com/blog-precog-2/entry/existential-types-ftw</a>
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2.7" class="outline-3">
+<h3 id="sec-2.7"><span class="section-number-3">2.7</span> experimental </h3>
+<div class="outline-text-3" id="text-2.7">
+
+<p>実験的な機能を使う際にも有効化が必要です。現状ではマクロが該当します。
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> まとめ </h2>
+<div class="outline-text-2" id="text-3">
+
+<p>Scala 2.10から、マニアックな機能だけなく、普通に使うような機能も有効化が必要になります。
+強力すぎる機能については乱用を避け、注意深く責任を持って使用しましょうという、Odersky先生からのメッセージですね。
+</p>
+<p>
+ScalaはライブラリやDSLを開発する側とそれらを利用する側のそれぞれの視点を考慮して作られています。
+</p>
+
+<p>
+参考：<a href="http://docs.scala-lang.org/sips/pending/modularizing-language-features.html">http://docs.scala-lang.org/sips/pending/modularizing-language-features.html</a>
+</p></div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Yasuyuki Maeda(@maeda_)
+<a href="mailto:clouds.across.the.moon at gmail dot com">&lt;clouds.across.the.moon at gmail dot com&gt;</a>
+</p>
+<p class="date"> Date: 2012-12-15 08:48:17 JST</p>
+<p class="creator">HTML generated by org-mode 6.33x in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
