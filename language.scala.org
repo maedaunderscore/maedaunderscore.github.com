@@ -1,4 +1,4 @@
-#+TITLE: Modularized Language features を解説する
+#+TITLE: Modularized Language Features を解説する
 #+AUTHOR: Yasuyuki Maeda(@maeda_)
 #+LANGUAGE: ja
 #+EMAIL: clouds.across.the.moon at gmail dot com
